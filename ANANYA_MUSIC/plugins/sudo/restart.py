@@ -43,10 +43,13 @@ async def is_heroku():
 # -------- GET LOGS -------- #
 @app.on_message(
     filters.command(["getlog", "logs", "getlogs"], prefixes=["/", "!", "%", ",", ".", "@", "#"])
-    & filters.user(SUDOERS)
 )
 @language
 async def log_(client, message, _):
+
+    if not message.from_user or message.from_user.id not in SUDOERS:
+        return
+
     try:
         await message.reply_document("log.txt")
     except:
@@ -56,10 +59,12 @@ async def log_(client, message, _):
 # -------- UPDATE / GITPULL COMMAND -------- #
 @app.on_message(
     filters.command(["update", "gitpull"], prefixes=["/", "!", "%", ",", ".", "@", "#"])
-    & filters.user(SUDOERS)
 )
 @language
 async def update_(client, message, _):
+
+    if not message.from_user or message.from_user.id not in SUDOERS:
+        return
 
     # Heroku check
     if await is_heroku():
@@ -165,9 +170,11 @@ async def update_(client, message, _):
 # -------- RESTART COMMAND -------- #
 @app.on_message(
     filters.command(["restart"], prefixes=["/", "!", "%", ",", ".", "@", "#"])
-    & filters.user(SUDOERS)
 )
 async def restart_(_, message):
+
+    if not message.from_user or message.from_user.id not in SUDOERS:
+        return
 
     msg = await message.reply_text("ʀᴇsᴛᴀʀᴛɪɴɢ...")
 
