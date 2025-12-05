@@ -8,20 +8,20 @@ import yt_dlp
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
 from py_yt import VideosSearch
-from ShrutiMusic.utils.database import is_on_off
-from ShrutiMusic import app
-from ShrutiMusic.utils.formatters import time_to_seconds
+from AnanyaMusic.utils.database import is_on_off
+from AnanyaMusic import app
+from AnanyaMusic.utils.formatters import time_to_seconds
 import random
 import logging
 import aiohttp
-from ShrutiMusic import LOGGER
+from AnanyaMusic import LOGGER
 from urllib.parse import urlparse
 
 YOUR_API_URL = None
 
 async def load_api_url():
     global YOUR_API_URL
-    logger = LOGGER("ShrutiMusic.platforms.Youtube.py")
+    logger = LOGGER("AnanyaMusic.platforms.Youtube.py")
     
     try:
         async with aiohttp.ClientSession() as session:
