@@ -13,6 +13,7 @@ Faker
 ffmpeg-python
 future==0.18.3
 gitpython
+google==3.0.0
 gpytranslate
 gtts
 hachoir
