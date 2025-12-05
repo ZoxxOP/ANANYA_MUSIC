@@ -51,3 +51,5 @@ wget
 yt-dlp
 youtube-search
 youtube-search-python
+git+https://github.com/AsmSafone/SafoneAPI
+git+https://github.com/ZoxxOP/AnanyaAPI
