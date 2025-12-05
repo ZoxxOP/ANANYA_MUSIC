@@ -7,7 +7,7 @@ import requests
 import yt_dlp
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
-from youtubesearchpython import VideosSearch
+from py_yt import VideosSearch
 from ANANYA_MUSIC.utils.database import is_on_off
 from ANANYA_MUSIC import app
 from ANANYA_MUSIC.utils.formatters import time_to_seconds
