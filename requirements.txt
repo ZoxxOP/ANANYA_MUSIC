@@ -55,3 +55,4 @@ bing_image_downloader
 git+https://github.com/ZoxxOP/AnanyaAPI
 googlesearch-python
 sympy
+py-yt-search
