@@ -29,7 +29,7 @@ pillow==9.5.0
 psutil
 pyfiglet
 pytz
-py-yt
+py-yt-search
 py-tgcalls==0.9.7
 pykeyboard
 pyshorteners
