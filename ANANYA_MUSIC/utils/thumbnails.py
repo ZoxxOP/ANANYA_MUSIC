@@ -125,7 +125,7 @@ async def get_thumb(videoid: str) -> str:
 
     # Add "@AnanyaBots" top-right (default font)
     font = ImageFont.truetype("ANANYA_MUSIC/assets/font.ttf", 28)  # 
-    text = "@𝐀ɴᴀɴʏᴀ𝐁ᴏᴛs"
+    text = "@AnanyaBots"
     text_size = draw.textsize(text, font=font)
     draw.text((1280 - text_size[0] - 10, 10), text, fill="black", font=font)
     # Cleanup and save
