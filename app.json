@@ -56,7 +56,12 @@
         "description": "Your Log Group ID, add your bot and promote as an admin with full rights!. Channel ki id mat daal dena bsdk.",
         "value": "",
         "required": true
-      }
+      },
+        "ANANYA_REPO": {
+      "description": "Vedio link appears with entertainment button",
+      "value": "https://files.catbox.moe/o6me7d.mp4",
+      "required": false
+        }
     },
     "buildpacks": [
           {
