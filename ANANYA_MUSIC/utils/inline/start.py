@@ -27,7 +27,7 @@ def private_panel(_):
         [
             
             InlineKeyboardButton("⌯ ʏᴛ-ᴀᴘɪ ⌯", callback_data="bot_info_data"),
-            InlineKeyboardButton(text=_["S_B_11"], callback_data="Ananya_Repo"),
+            InlineKeyboardButton(text=_["S_B_11"], callback_data="panel"),
         ],
         [
             InlineKeyboardButton(text=_["S_B_5"], user_id=config.OWNER_ID),
