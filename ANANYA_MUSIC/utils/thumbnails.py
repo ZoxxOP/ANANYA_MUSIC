@@ -1,140 +1,179 @@
 import os
-import re
-import aiofiles
+from pathlib import Path
+import traceback
+
 import aiohttp
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+import aiofiles
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from py_yt import VideosSearch
-from config import YOUTUBE_IMG_URL as FAILED
 
-# Constants
-CACHE_DIR = "cache"
-os.makedirs(CACHE_DIR, exist_ok=True)
+# ---------------- CONFIG ----------------
+CACHE = Path("cache")
+CACHE.mkdir(exist_ok=True)
 
-PANEL_W, PANEL_H = 763, 545
-PANEL_X = (1280 - PANEL_W) // 2
-PANEL_Y = 88
-TRANSPARENCY = 170
-INNER_OFFSET = 36
+W, H = 1280, 720
 
-THUMB_W, THUMB_H = 542, 273
-THUMB_X = PANEL_X + (PANEL_W - THUMB_W) // 2
-THUMB_Y = PANEL_Y + INNER_OFFSET
+FONT_BOLD = "ANANYA_MUSIC/assets/font.ttf"
+FONT_REG = "ANANYA_MUSIC/assets/font2.ttf"
+DEFAULT_IMG = "ANANYA_MUSIC/assets/AnanyaBots.jpg"
 
-TITLE_X = 377
-META_X = 377
-TITLE_Y = THUMB_Y + THUMB_H + 10
-META_Y = TITLE_Y + 45
 
-BAR_X, BAR_Y = 388, META_Y + 45
-BAR_RED_LEN = 280
-BAR_TOTAL_LEN = 480
-
-ICONS_W, ICONS_H = 415, 45
-ICONS_X = PANEL_X + (PANEL_W - ICONS_W) // 2
-ICONS_Y = BAR_Y + 48
-
-MAX_TITLE_WIDTH = 580
-
-def trim_to_width(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> str:
-    ellipsis = "…"
-    if font.getlength(text) <= max_w:
-        return text
-    for i in range(len(text) - 1, 0, -1):
-        if font.getlength(text[:i] + ellipsis) <= max_w:
-            return text[:i] + ellipsis
-    return ellipsis
-
-async def get_thumb(videoid: str) -> str:
-    cache_path = os.path.join(CACHE_DIR, f"{videoid}_v4.png")
-    if os.path.exists(cache_path):
-        return cache_path
-
-    # YouTube video data fetch
-    results = VideosSearch(f"https://www.youtube.com/watch?v={videoid}", limit=1)
+# ---------------- HELPERS ----------------
+def font(path, size):
     try:
-        results_data = await results.next()
-        result_items = results_data.get("result", [])
-        if not result_items:
-            raise ValueError("No results found.")
-        data = result_items[0]
-        title = re.sub(r"\W+", " ", data.get("title", "Unsupported Title")).title()
-        thumbnail = data.get("thumbnails", [{}])[0].get("url", FAILED)
-        duration = data.get("duration")
-        views = data.get("viewCount", {}).get("short", "Unknown Views")
+        return ImageFont.truetype(path, size)
+    except:
+        return ImageFont.load_default()
+
+
+# ---------------- MAIN ----------------
+async def get_thumb(videoid: str):
+    tmp = None
+
+    try:
+        data = (await VideosSearch(
+            f"https://www.youtube.com/watch?v={videoid}", limit=1
+        ).next())["result"][0]
+
+        title = data["title"]
+        channel = data["channel"]["name"]
+        views = data["viewCount"]["short"]
+        duration = data["duration"]
+
+        thumb = data["thumbnails"][-1]["url"].split("?")[0]
+        tmp = CACHE / f"{videoid}.jpg"
+
+        async with aiohttp.ClientSession() as s:
+            async with s.get(thumb) as r:
+                async with aiofiles.open(tmp, "wb") as f:
+                    await f.write(await r.read())
+
+        cover = Image.open(tmp).convert("RGBA")
+
     except Exception:
-        title, thumbnail, duration, views = "Unsupported Title", FAILED, None, "Unknown Views"
+        traceback.print_exc()
+        cover = Image.open(DEFAULT_IMG).convert("RGBA")
+        title, channel, views, duration = "Pal Pal Loop", "Unknown", "0", "00:00"
 
-    is_live = not duration or str(duration).strip().lower() in {"", "live", "live now"}
-    duration_text = "Live" if is_live else duration or "Unknown Mins"
+    # ---------------- BACKGROUND ----------------
+    bg = cover.resize((W, H)).filter(ImageFilter.GaussianBlur(35))
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 160))
+    canvas = Image.alpha_composite(bg, overlay)
+    draw = ImageDraw.Draw(canvas)
 
-    # Download thumbnail
-    thumb_path = os.path.join(CACHE_DIR, f"thumb{videoid}.png")
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(thumbnail) as resp:
-                if resp.status == 200:
-                    async with aiofiles.open(thumb_path, "wb") as f:
-                        await f.write(await resp.read())
-    except Exception:
-        return FAILED
+    # ---------------- TOP LEFT CORNER TEXT ----------------
+    f_corner = font(FONT_REG, 22)
+    draw.text(
+        (18, 14),
+        "TheAnanya",
+        fill=(200, 200, 200),
+        font=f_corner
+    )
 
-    # Create base image
-    base = Image.open(thumb_path).resize((1280, 720)).convert("RGBA")
-    bg = ImageEnhance.Brightness(base.filter(ImageFilter.BoxBlur(10))).enhance(0.6)
+    # ---------------- LEFT CARD FRAME ----------------
+    card_x, card_y = 90, 90
+    card_w, card_h = 420, 540
+    pink = (235, 170, 210)
 
-    # Frosted glass panel
-    panel_area = bg.crop((PANEL_X, PANEL_Y, PANEL_X + PANEL_W, PANEL_Y + PANEL_H))
-    overlay = Image.new("RGBA", (PANEL_W, PANEL_H), (255, 255, 255, TRANSPARENCY))
-    frosted = Image.alpha_composite(panel_area, overlay)
-    mask = Image.new("L", (PANEL_W, PANEL_H), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, PANEL_W, PANEL_H), 50, fill=255)
-    bg.paste(frosted, (PANEL_X, PANEL_Y), mask)
+    draw.rounded_rectangle(
+        (card_x - 12, card_y - 12, card_x + card_w + 12, card_y + card_h + 12),
+        radius=40,
+        outline=pink,
+        width=8
+    )
 
-    # Draw details
-    draw = ImageDraw.Draw(bg)
-    try:
-        title_font = ImageFont.truetype("ANANYA_MUSIC/assets/font.ttf", 32)
-        regular_font = ImageFont.truetype("ANANYA_MUSIC/assets/font2.ttf", 18)
-    except OSError:
-        title_font = regular_font = ImageFont.load_default()
+    # ---------------- COVER IMAGE ----------------
+    cover = cover.resize((360, 360))
+    mask = Image.new("L", (360, 360), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, 360, 360), 25, fill=255)
+    canvas.paste(cover, (card_x + 30, card_y + 25), mask)
 
-    thumb = base.resize((THUMB_W, THUMB_H))
-    tmask = Image.new("L", thumb.size, 0)
-    ImageDraw.Draw(tmask).rounded_rectangle((0, 0, THUMB_W, THUMB_H), 20, fill=255)
-    bg.paste(thumb, (THUMB_X, THUMB_Y), tmask)
+    # ---------------- PROGRESS BAR (LEFT) ----------------
+    bar_y = card_y + 410
+    draw.line(
+        (card_x + 40, bar_y, card_x + 380, bar_y),
+        fill=(120, 120, 120),
+        width=6
+    )
+    draw.line(
+        (card_x + 40, bar_y, card_x + 200, bar_y),
+        fill=pink,
+        width=6
+    )
 
-    draw.text((TITLE_X, TITLE_Y), trim_to_width(title, title_font, MAX_TITLE_WIDTH), fill="black", font=title_font)
-    draw.text((META_X, META_Y), f"YouTube | {views}", fill="black", font=regular_font)
+    f_small = font(FONT_REG, 18)
+    draw.text((card_x + 40, bar_y + 12), "00:00", fill=(180, 180, 180), font=f_small)
+    draw.text((card_x + 330, bar_y + 12), duration, fill=(180, 180, 180), font=f_small)
 
-    # Progress bar
-    draw.line([(BAR_X, BAR_Y), (BAR_X + BAR_RED_LEN, BAR_Y)], fill="red", width=6)
-    draw.line([(BAR_X + BAR_RED_LEN, BAR_Y), (BAR_X + BAR_TOTAL_LEN, BAR_Y)], fill="gray", width=5)
-    draw.ellipse([(BAR_X + BAR_RED_LEN - 7, BAR_Y - 7), (BAR_X + BAR_RED_LEN + 7, BAR_Y + 7)], fill="red")
+    # ---------------- TEXT BELOW COVER ----------------
+    f_title = font(FONT_BOLD, 24)
+    f_meta = font(FONT_REG, 18)
 
-    draw.text((BAR_X, BAR_Y + 15), "00:00", fill="black", font=regular_font)
-    end_text = "Live" if is_live else duration_text
-    draw.text((BAR_X + BAR_TOTAL_LEN - (90 if is_live else 60), BAR_Y + 15), end_text, fill="red" if is_live else "black", font=regular_font)
+    draw.text(
+        (card_x + 40, card_y + 450),
+        title[:26],
+        fill=(245, 245, 245),
+        font=f_title
+    )
 
-    # Icons
-    icons_path = "ANANYA_MUSIC/assets/play_icons.png"
-    if os.path.isfile(icons_path):
-        ic = Image.open(icons_path).resize((ICONS_W, ICONS_H)).convert("RGBA")
-        r, g, b, a = ic.split()
-        black_ic = Image.merge("RGBA", (r.point(lambda *_: 0), g.point(lambda *_: 0), b.point(lambda *_: 0), a))
-        bg.paste(black_ic, (ICONS_X, ICONS_Y), black_ic)
+    draw.text(
+        (card_x + 40, card_y + 480),
+        f"{channel} | {views} views",
+        fill=(170, 170, 170),
+        font=f_meta
+    )
 
-    # Add "@AnanyaBots" top-right (default font)
-    font = ImageFont.truetype("ANANYA_MUSIC/assets/font.ttf", 28)  # 
-    text = "@AnanyaBots"
-    text_size = draw.textsize(text, font=font)
-    draw.text((1280 - text_size[0] - 10, 10), text, fill="black", font=font)
-    # Cleanup and save
-    try:
-        os.remove(thumb_path)
-    except OSError:
-        pass
+    # ---------------- RIGHT SIDE INFO ----------------
+    f_np = font(FONT_REG, 20)
+    f_big = font(FONT_BOLD, 46)
+    f_info = font(FONT_REG, 28)
 
-    bg.save(cache_path)
-    return cache_path
+    # NOW PLAYING pill
+    pill_x, pill_y = 560, 140
+    draw.rounded_rectangle(
+        (pill_x, pill_y, pill_x + 150, pill_y + 40),
+        radius=20,
+        fill=pink
+    )
+    draw.text(
+        (pill_x + 22, pill_y + 9),
+        "NOW PLAYING",
+        fill=(0, 0, 0),
+        font=f_np
+    )
 
-    
+    # TITLE
+    draw.text(
+        (560, 200),
+        title,
+        fill=(255, 255, 255),
+        font=f_big
+    )
+
+    # underline
+    draw.line((560, 260, 980, 260), fill=pink, width=3)
+
+    # META
+    draw.text((560, 300), "Duration:", fill=(200, 200, 200), font=f_info)
+    draw.text((700, 300), duration, fill=pink, font=f_info)
+
+    draw.text((560, 345), "Views:", fill=(200, 200, 200), font=f_info)
+    draw.text((700, 345), views, fill=pink, font=f_info)
+
+    # ---------------- RIGHT PROGRESS ----------------
+    bar_y2 = 420
+    draw.line((560, bar_y2, 1040, bar_y2), fill=(140, 140, 140), width=6)
+    draw.line((560, bar_y2, 800, bar_y2), fill=(255, 255, 255), width=6)
+    draw.ellipse((790, bar_y2 - 6, 806, bar_y2 + 10), fill=(255, 255, 255))
+
+    draw.text((560, bar_y2 + 12), "00:00", fill=(180, 180, 180), font=f_small)
+    draw.text((1000, bar_y2 + 12), duration, fill=(180, 180, 180), font=f_small)
+
+    # ---------------- SAVE ----------------
+    out = CACHE / f"{videoid}_final.png"
+    canvas.save(out, quality=95)
+
+    if tmp and tmp.exists():
+        os.remove(tmp)
+
+    return str(out)
