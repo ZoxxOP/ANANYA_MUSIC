@@ -26,6 +26,13 @@ def font(path, size):
         return ImageFont.load_default()
 
 
+def circle_mask(size):
+    mask = Image.new("L", (size, size), 0)
+    d = ImageDraw.Draw(mask)
+    d.ellipse((0, 0, size, size), fill=255)
+    return mask
+
+
 # ---------------- MAIN ----------------
 async def get_thumb(videoid: str):
     tmp = None
@@ -48,130 +55,87 @@ async def get_thumb(videoid: str):
                 async with aiofiles.open(tmp, "wb") as f:
                     await f.write(await r.read())
 
-        cover = Image.open(tmp).convert("RGBA")
+        poster = Image.open(tmp).convert("RGBA")
 
     except Exception:
         traceback.print_exc()
-        cover = Image.open(DEFAULT_IMG).convert("RGBA")
-        title, channel, views, duration = "Pal Pal Loop", "Unknown", "0", "00:00"
+        poster = Image.open(DEFAULT_IMG).convert("RGBA")
+        title, channel, views, duration = "Now Playing", "", "", ""
 
     # ---------------- BACKGROUND ----------------
-    bg = cover.resize((W, H)).filter(ImageFilter.GaussianBlur(35))
-    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 160))
+    bg = poster.resize((W, H)).filter(ImageFilter.GaussianBlur(40))
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 130))
     canvas = Image.alpha_composite(bg, overlay)
     draw = ImageDraw.Draw(canvas)
 
-    # ---------------- TOP LEFT CORNER TEXT ----------------
-    f_corner = font(FONT_REG, 22)
+    # ---------------- GREEN BORDER ----------------
+    green = (150, 255, 60)
+    draw.rectangle((10, 10, W - 10, H - 10), outline=green, width=10)
+
+    # ---------------- TOP LEFT TEXT ----------------
     draw.text(
-        (18, 14),
+        (28, 22),
         "TheAnanya",
-        fill=(200, 200, 200),
-        font=f_corner
+        fill=(255, 255, 255),
+        font=font(FONT_BOLD, 28)
     )
 
-    # ---------------- LEFT CARD FRAME ----------------
-    card_x, card_y = 90, 90
-    card_w, card_h = 420, 540
-    pink = (235, 170, 210)
+    # ---------------- CIRCULAR POSTER ----------------
+    size = 360
+    poster = poster.resize((size, size))
+    mask = circle_mask(size)
 
-    draw.rounded_rectangle(
-        (card_x - 12, card_y - 12, card_x + card_w + 12, card_y + card_h + 12),
-        radius=40,
-        outline=pink,
-        width=8
-    )
+    px, py = 140, 200
+    canvas.paste(poster, (px, py), mask)
 
-    # ---------------- COVER IMAGE ----------------
-    cover = cover.resize((360, 360))
-    mask = Image.new("L", (360, 360), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, 360, 360), 25, fill=255)
-    canvas.paste(cover, (card_x + 30, card_y + 25), mask)
-
-    # ---------------- PROGRESS BAR (LEFT) ----------------
-    bar_y = card_y + 410
-    draw.line(
-        (card_x + 40, bar_y, card_x + 380, bar_y),
-        fill=(120, 120, 120),
-        width=6
-    )
-    draw.line(
-        (card_x + 40, bar_y, card_x + 200, bar_y),
-        fill=pink,
+    # circle border
+    draw.ellipse(
+        (px - 6, py - 6, px + size + 6, py + size + 6),
+        outline=(120, 220, 200),
         width=6
     )
 
-    f_small = font(FONT_REG, 18)
-    draw.text((card_x + 40, bar_y + 12), "00:00", fill=(180, 180, 180), font=f_small)
-    draw.text((card_x + 330, bar_y + 12), duration, fill=(180, 180, 180), font=f_small)
+    # ---------------- FONTS ----------------
+    f_head = font(FONT_BOLD, 46)
+    f_title = font(FONT_BOLD, 34)
+    f_meta = font(FONT_REG, 26)
 
-    # ---------------- TEXT BELOW COVER ----------------
-    f_title = font(FONT_BOLD, 24)
-    f_meta = font(FONT_REG, 18)
+    # ---------------- RIGHT TEXT ----------------
+    tx = 560
+
+    draw.text((tx, 190), "NOW PLAYING", fill=(255, 255, 255), font=f_head)
 
     draw.text(
-        (card_x + 40, card_y + 450),
-        title[:26],
+        (tx, 255),
+        title[:50],
         fill=(245, 245, 245),
         font=f_title
     )
 
     draw.text(
-        (card_x + 40, card_y + 480),
-        f"{channel} | {views} views",
-        fill=(170, 170, 170),
+        (tx, 315),
+        f"Views : {views} views",
+        fill=(210, 210, 210),
         font=f_meta
     )
 
-    # ---------------- RIGHT SIDE INFO ----------------
-    f_np = font(FONT_REG, 20)
-    f_big = font(FONT_BOLD, 46)
-    f_info = font(FONT_REG, 28)
-
-    # NOW PLAYING pill
-    pill_x, pill_y = 560, 140
-    draw.rounded_rectangle(
-        (pill_x, pill_y, pill_x + 150, pill_y + 40),
-        radius=20,
-        fill=pink
-    )
     draw.text(
-        (pill_x + 22, pill_y + 9),
-        "NOW PLAYING",
-        fill=(0, 0, 0),
-        font=f_np
+        (tx, 355),
+        f"Duration : {duration} Mins",
+        fill=(210, 210, 210),
+        font=f_meta
     )
 
-    # TITLE
     draw.text(
-        (560, 200),
-        title,
-        fill=(255, 255, 255),
-        font=f_big
+        (tx, 395),
+        f"Channel : {channel}",
+        fill=(210, 210, 210),
+        font=f_meta
     )
-
-    # underline
-    draw.line((560, 260, 980, 260), fill=pink, width=3)
-
-    # META
-    draw.text((560, 300), "Duration:", fill=(200, 200, 200), font=f_info)
-    draw.text((700, 300), duration, fill=pink, font=f_info)
-
-    draw.text((560, 345), "Views:", fill=(200, 200, 200), font=f_info)
-    draw.text((700, 345), views, fill=pink, font=f_info)
-
-    # ---------------- RIGHT PROGRESS ----------------
-    bar_y2 = 420
-    draw.line((560, bar_y2, 1040, bar_y2), fill=(140, 140, 140), width=6)
-    draw.line((560, bar_y2, 800, bar_y2), fill=(255, 255, 255), width=6)
-    draw.ellipse((790, bar_y2 - 6, 806, bar_y2 + 10), fill=(255, 255, 255))
-
-    draw.text((560, bar_y2 + 12), "00:00", fill=(180, 180, 180), font=f_small)
-    draw.text((1000, bar_y2 + 12), duration, fill=(180, 180, 180), font=f_small)
 
     # ---------------- SAVE ----------------
     out = CACHE / f"{videoid}_final.png"
-    canvas.save(out, quality=95)
+    canvas.save(out, quality=95, optimize=True)
 
     if tmp and tmp.exists():
         os.remove(tmp)
