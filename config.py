@@ -29,7 +29,7 @@ API_KEY = getenv("API_KEY", 'NxGBNexGenBots790d34') # youtube song api key, gene
 
 
 PRIVACY_LINK = getenv("PRIVACY_LINK", "https://telegra.ph/Privacy-Policy-10-12-225")
-SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/AnanyaBots")
+SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/Ananya_Bots")
 SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/AnanyaBotSupport")
 AUTO_LEAVING_ASSISTANT = getenv("AUTO_LEAVING_ASSISTANT", "False")
 AUTO_LEAVE_ASSISTANT_TIME = int(getenv("ASSISTANT_LEAVE_TIME", "9000"))
