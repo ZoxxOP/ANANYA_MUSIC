@@ -75,7 +75,7 @@ async def get_thumb(videoid: str):
     # ---------------- TOP LEFT TEXT ----------------
     draw.text(
         (28, 22),
-        "TheAnanya",
+        "AnanyaxMusic",
         fill=(255, 255, 255),
         font=font(FONT_BOLD, 28)
     )
